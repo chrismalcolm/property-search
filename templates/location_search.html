@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Location Search</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div id="location-container">
+        <h1>Search for a Location</h1>
+        <h2>City, Towns whatever</h2>
+        <input type="text" id="location-search" autocomplete="off" placeholder="Type to search for locations...">
+        <ul id="location-results"></ul>
+    </div>
+
+    <script>
+        document.getElementById('location-search').addEventListener('input', function() {
+            const query = this.value;
+            fetch(`/locations?query=${query}`)
+                .then(response => response.json())
+                .then(data => {
+                    const results = document.getElementById('location-results');
+                    results.innerHTML = '';
+                    data.forEach(location => {
+                        const item = document.createElement('li');
+                        item.textContent = location.display_name;
+                        item.onclick = function() {
+                            window.location.href = `/properties?identifier=${location.identifier}&display_name=${encodeURIComponent(location.display_name)}`;
+                        };
+                        results.appendChild(item);
+                    });
+                });
+        });
+    </script>
+</body>
+</html>

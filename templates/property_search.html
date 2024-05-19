@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Property Search</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div id="sidebar">
+        <h1>Property Search</h1>
+        <h2>{{ display_name }}</h2>
+        <button id="change-location">Change Location</button>
+    </div>
+    <div id="map-container">
+        <div id="map"></div>
+        <div id="form-container">
+            <form id="property-form">
+                <label for="min_price"><b>Min Price:</b></label>
+                <input type="number" step="1" id="min_price" name="min_price" value="100000">
+                <label for="max_price"><b>Max Price:</b></label>
+                <input type="number" step="1" id="max_price" name="max_price" value="250000">
+                <label for="min_bedrooms"><b>Min Bedrooms:</b></label>
+                <input type="number" step="1" id="min_bedrooms" name="min_bedrooms" value="2">
+                <label for="max_bedrooms"><b>Max Bedrooms:</b></label>
+                <input type="number" step="1" id="max_bedrooms" name="max_bedrooms" value="2">
+                <label for="min_deposit"><b>Min Deposit:</b></label>
+                <input type="number" step="1" id="min_deposit" name="min_deposit" value="0">
+                <label for="max_deposit"><b>Max Deposit:</b></label>
+                <input type="number" step="1" id="max_deposit" name="max_deposit" value="30000">
+                <label for="mortgage_length"><b>Mortgage Length:</b></label>
+                <input type="number" id="mortgage_length" name="mortgage_length" value="10">
+                <label for="mortgage_interest_rate"><b>Mortgage Interest Rate:</b></label>
+                <input type="number" step="0.01" id="mortgage_interest_rate" name="mortgage_interest_rate" value="5.5">
+                <label for="investment_increase"><b>Investment Increase:</b></label>
+                <input type="number" step="1" id="investment_increase" name="investment_increase" value="0">
+                <label for="investment_deduction"><b>Investment Deduction:</b></label>
+                <input type="number" step="1" id="investment_deduction" name="investment_deduction" value="0">
+                <label for="rent_increase"><b>Rent Increase:</b></label>
+                <input type="number" step="1" id="rent_increase" name="rent_increase" value="0">
+                <label for="rent_deduction"><b>Rent Deduction:</b></label>
+                <input type="number" step="1" id="rent_deduction" name="rent_deduction" value="0">
+                <button type="submit">Search</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script>
+        document.getElementById('change-location').addEventListener('click', function() {
+            window.location.href = '/';
+        });
+
+        var map = null;
+        var selectedMarker = null;
+        var selectedElement = null;
+        var markers = [];
+
+        function initializeMap(center) {
+            if (map == null) {
+                map = L.map('map').setView(center, 13);
+            } else {
+                map.setView(center, 13);}
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19
+            }).addTo(map);
+        }
+
+        function highlightMarker(marker) {
+            if (selectedMarker) {
+                map.removeLayer(selectedMarker);
+            }
+            selectedMarker = L.circleMarker(marker.getLatLng(), {
+                radius: 10,
+                color: 'red'
+            }).addTo(map);
+        }
+
+        function highlightElement(element) {
+            if (selectedElement) {
+                selectedElement.classList.remove('selected');
+            }
+            element.classList.add('selected');
+            selectedElement = element;
+        }
+
+        function clearMarkers() {
+            markers.forEach(marker => {
+                map.removeLayer(marker);
+            });
+            markers = [];
+        }
+
+        function addPropertiesToMap(properties) {
+            document.getElementById('sidebar').innerHTML = `
+                <h1>Property Search</h1>
+                <h2>{{ display_name }}</h2>
+                <button id="change-location">Change Location</button>`;
+            if (properties.length > 0) {
+                initializeMap([properties[0].latitude, properties[0].longitude]);
+            } else {
+                initializeMap([51.505, -0.09]);
+            }
+            properties.forEach(property => {
+                var marker = L.marker([property.latitude, property.longitude]).addTo(map)
+                    .bindPopup(`<b>Rank: ${property.rank} </b>- ${property.address}`);
+
+                marker.on('click', function() {
+                    highlightMarker(marker);
+                    highlightElement(propertyItem);
+                });
+
+                markers.push(marker);
+
+                var propertyItem = document.createElement('div');
+                propertyItem.className = 'property-item';
+                propertyItem.innerHTML = `
+                    <a href="${property.href}"><img src="${property.image}" alt="${property.address}"></a>
+                    <div>
+                        <div><span>Rank: <b>${property.rank}</b></span></div>
+                        <div><span>Address: <b>${property.address}</b></span></div>
+                        <div><span>Price: <b>${property.price}</b></span></div>
+                        <div><span>Estimated Rent: <b>${property.estimated_rent}</b></span></div>
+                        <div><span>ROI: <b>${property.roi}</b></span></div>
+                    </div>`;
+                propertyItem.onclick = function() {
+                    map.setView(marker.getLatLng(), 16);
+                    highlightMarker(marker);
+                    marker.openPopup();
+                    highlightElement(propertyItem);
+                };
+
+                document.getElementById('sidebar').appendChild(propertyItem);
+            });
+
+            document.getElementById('change-location').addEventListener('click', function() {
+                window.location.href = '/';
+            });
+        }
+
+        function fetchProperties(minPrice, maxPrice, minBedrooms, maxBedrooms, minDeposit, maxDeposit, mortgageLength, mortgageInterestRate, investmentIncrease, investmentDeduction, rentIncrease, rentDeduction) {
+            fetch('/properties_data', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    min_price: minPrice,
+                    max_price: maxPrice,
+                    min_bedrooms: minBedrooms,
+                    max_bedrooms: maxBedrooms,
+                    min_deposit: minDeposit,
+                    max_deposit: maxDeposit,
+                    mortgage_length: mortgageLength,
+                    mortgage_interest_rate: mortgageInterestRate,
+                    investment_increase: investmentIncrease,
+                    investment_deduction: investmentDeduction,
+                    rent_increase: rentIncrease,
+                    rent_deduction: rentDeduction,
+                    identifier: "{{ identifier }}",
+                    display_name: "{{ display_name }}"
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                clearMarkers();
+                addPropertiesToMap(data);
+            });
+        }
+
+        document.getElementById('property-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            var minPrice = document.getElementById('min_price').value;
+            var maxPrice = document.getElementById('max_price').value;
+            var minBedrooms = document.getElementById('min_bedrooms').value;
+            var maxBedrooms = document.getElementById('max_bedrooms').value;
+            var minDeposit = document.getElementById('min_deposit').value;
+            var maxDeposit = document.getElementById('max_deposit').value;
+            var mortgageLength = document.getElementById('mortgage_length').value;
+            var mortgageInterestRate = document.getElementById('mortgage_interest_rate').value;
+            var investmentIncrease = document.getElementById('investment_increase').value;
+            var investmentDeduction = document.getElementById('investment_deduction').value;
+            var rentIncrease = document.getElementById('rent_increase').value;
+            var rentDeduction = document.getElementById('rent_deduction').value;
+            fetchProperties(minPrice, maxPrice, minBedrooms, maxBedrooms, minDeposit, maxDeposit, mortgageLength, mortgageInterestRate, investmentIncrease, investmentDeduction, rentIncrease, rentDeduction);
+        });
+
+        fetchProperties(100000, 250000, 2, 2, 0, 30000, 10, 5.5, 0, 0, 0, 0);
+    </script>
+</body>
+</html>
