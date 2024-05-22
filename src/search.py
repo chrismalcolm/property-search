@@ -212,7 +212,7 @@ class SearchParameters:
         url += f"propertyTypes={','.join(property_type.value for property_type in self.property_types)}&"
         url += f"mustHave={','.join(must_have.value for must_have in self.must_have)}&"
         url += f"dontShow={','.join(dont_show.value for dont_show in self.dont_show)}&"
-        url += "includeLetAgreed=true"
+        url += "includeSSTC=false"
         return URL(url, PurchaseCategory.BUY)
     
     def _url_property_to_rent(self) -> URL:
@@ -226,7 +226,7 @@ class SearchParameters:
         url += f"mustHave={','.join(must_have.value for must_have in self.must_have)}&"
         url += f"dontShow={','.join(dont_show.value for dont_show in self.dont_show)}&"
         url += f"furnishTypes={','.join(furnish_type.value for furnish_type in self.furnish_types)}&"
-        url += "includeSSTC=false"
+        url += "includeLetAgreed=true"
         return URL(url, PurchaseCategory.RENT)
 
 class SearchEngine:
@@ -477,5 +477,6 @@ class SearchEngine:
                     "longitude": property.geo_location.longitude,
                 },
                 "purchase_category": property.purchase_category.value,
+                "image_url": property.image_url,
             })
         return json.dumps(output)
