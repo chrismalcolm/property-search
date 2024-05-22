@@ -45,6 +45,10 @@
         </div>
     </div>
 
+    <div id="loading-spinner" class="spinner-container" style="display: none;">
+        <div class="spinner"></div>
+    </div>
+
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script>
         document.getElementById('change-location').addEventListener('click', function() {
@@ -61,7 +65,6 @@
                 map = L.map('map').setView(center, 13);
             } else {
                 map.setView(center, 13);}
-
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19
             }).addTo(map);
@@ -139,7 +142,16 @@
             });
         }
 
+        function showLoadingSpinner() {
+            document.getElementById('loading-spinner').style.display = 'flex';
+        }
+
+        function hideLoadingSpinner() {
+            document.getElementById('loading-spinner').style.display = 'none';
+        }
+
         function fetchProperties(minPrice, maxPrice, minBedrooms, maxBedrooms, minDeposit, maxDeposit, mortgageLength, mortgageInterestRate, investmentIncrease, investmentDeduction, rentIncrease, rentDeduction) {
+            showLoadingSpinner();
             fetch('/properties_data', {
                 method: 'POST',
                 headers: {
@@ -166,6 +178,9 @@
             .then(data => {
                 clearMarkers();
                 addPropertiesToMap(data);
+            })
+            .finally(() => {
+                hideLoadingSpinner();
             });
         }
 
