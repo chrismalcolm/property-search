@@ -38,7 +38,7 @@ class App:
         @self._server.route('/locations', methods=['GET'])
         def get_locations():
             location_input = request.args.get('query', None)
-            if location_input is None:
+            if location_input is None or location_input == '':
                 return jsonify([])
             suggestions = self.get_location_suggestions(location_input) 
             return jsonify(suggestions)
