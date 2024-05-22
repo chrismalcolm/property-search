@@ -1,5 +1,6 @@
 import json
 import math
+import numpy as np
 from scipy.interpolate import griddata
 from typing import Callable, List, Set
 from src.cache import Cache
@@ -115,6 +116,12 @@ class ValuationEngine:
     def _get_valuation(self, rent_properties: List[Property], buy_properties: List[Property], valuation_params: ValuationParameters) -> List[Valuation]:
         if len(rent_properties) == 0 or len(buy_properties) == 0:
             return []
+        
+        rent_prices = [property.price for property in rent_properties]
+        filtered_rent_prices = remove_outliers(rent_prices)
+        rent_properties = [property for property in rent_properties if property.price in filtered_rent_prices]
+        rent_prices = [property.price for property in rent_properties]
+        
         self.points = [
             (property.geo_location.longitude, property.geo_location.latitude)
             for property in rent_properties
@@ -268,6 +275,18 @@ def getHeight(properties: Set[Property], width: int, height: int):
     values.extend([avg_price, avg_price, avg_price, avg_price])
 
     def f(x, y):
-        return griddata(points, values, (x, y), method='linear')
+        return griddata(points, values, (x, y), method='cubic')
 
     return f
+
+def remove_outliers(data, threshold=1.5):
+    """
+    Remove outliers from data using the IQR method.
+    """
+    data = np.array(data)
+    q1 = np.percentile(data, 25)
+    q3 = np.percentile(data, 75)
+    iqr = q3 - q1
+    lower_bound = q1 - (iqr * threshold)
+    upper_bound = q3 + (iqr * threshold)
+    return [x for x in data if lower_bound <= x <= upper_bound]
